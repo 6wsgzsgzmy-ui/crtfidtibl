@@ -71,6 +71,8 @@ input{font:inherit;font-size:16px;width:100%;padding:11px 12px;border-radius:10p
 .scb #scx{position:static;transform:none}
 .pb{padding:13px 30px;border-radius:12px;font-weight:600;background:rgba(255,255,255,.25);color:#fff;cursor:pointer}
 .vh{position:absolute;opacity:0;width:1px;height:1px}
+#ver{text-align:center;font-size:11px;color:var(--muted);margin:6px 0 0}
+html.under header{padding-top:36px}
 </style>
 </head>
 <body>
@@ -82,6 +84,7 @@ input{font:inherit;font-size:16px;width:100%;padding:11px 12px;border-radius:10p
   <div id="grid"></div>
   <p id="empty">Aucune carte pour l'instant.<br>Touchez + pour ajouter la première, ou scannez-la avec la caméra.</p>
   <div class="bk"><button id="exp">Exporter mes cartes</button><button id="imp">Importer</button><input id="imf" type="file" accept="application/json,.json" hidden></div>
+  <p id="ver"></p>
 </main>
 
 <div id="v" class="ov" hidden>
@@ -299,8 +302,19 @@ const ean=s=>{const d=s.split('').map(Number),k=d.pop();let t=0;d.reverse().forE
 const guess=v=>/^\d{13}$/.test(v)&&ean(v)?'EAN13':/^\d{8}$/.test(v)&&ean(v)?'EAN8':'CODE128';
 $('#c').oninput=()=>{if(fm==='auto'){fmt=guess($('#c').value.trim());paint()}};
 
+/* ---------- Diagnostic d'affichage ---------- */
+try{
+  const pr=document.createElement('div');
+  pr.style.cssText='position:fixed;top:0;visibility:hidden;padding-top:env(safe-area-inset-top,0px)';
+  document.body.appendChild(pr);
+  const inset=Math.round(pr.getBoundingClientRect().height);pr.remove();
+  const inst=navigator.standalone===true||matchMedia('(display-mode: standalone)').matches;
+  if(inst&&inset>4)document.documentElement.classList.add('under');
+  $('#ver').textContent='v8 · '+(inst?'app installée':'navigateur')+' · marge haute '+inset+' px';
+}catch(e){}
+
 /* ---------- PWA ---------- */
-if('serviceWorker' in navigator)addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(()=>{}));
+if('serviceWorker' in navigator)addEventListener('load',()=>navigator.serviceWorker.register('./sw.js',{updateViaCache:'none'}).catch(()=>{}));
 // Précharge le lecteur de codes-barres (fichier .wasm) afin que le scan fonctionne aussi hors ligne
 addEventListener('load',()=>setTimeout(()=>{try{if(navigator.onLine&&typeof ImageData==='function')detector().detect(new ImageData(1,1)).catch(()=>{})}catch(e){}},4000));
 try{navigator.storage&&navigator.storage.persist&&navigator.storage.persist()}catch(e){}
