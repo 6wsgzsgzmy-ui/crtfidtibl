@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Cartes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#f2f2f7" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<title>Mes cartes</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jsbarcode/3.11.6/JsBarcode.all.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@zxing/library@0.21.3/umd/index.min.js"></script>
+<style>
+:root{--bg:#f2f2f7;--panel:#fff;--text:#1c1c1e;--muted:#6e6e73;--line:#d8d8de;--accent:#0a64d6;--danger:#d70015;color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#000;--panel:#1c1c1e;--text:#f2f2f7;--muted:#9a9aa1;--line:#38383a;--accent:#4da3ff;--danger:#ff6b6b;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#000;--panel:#1c1c1e;--text:#f2f2f7;--muted:#9a9aa1;--line:#38383a;--accent:#4da3ff;--danger:#ff6b6b;color-scheme:dark}
+html{scroll-padding-top:env(safe-area-inset-top,0px);height:100%}
+*,*::before,*::after{box-sizing:border-box}
+[hidden]{display:none!important}
+body{margin:0;min-height:100%;background:var(--bg);color:var(--text);font:16px/1.4 -apple-system,BlinkMacSystemFont,"SF Pro Text","Helvetica Neue",Arial,sans-serif}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--bg)}
+header{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);display:flex;justify-content:space-between;align-items:center;padding:10px 16px 6px}
+h1{font-size:30px;margin:0;letter-spacing:-.02em}
+button{font:inherit;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.ic{width:40px;height:40px;border-radius:50%;border:0;background:var(--accent);color:#fff;font-size:26px;line-height:1}
+main{padding:6px 16px 32px;max-width:640px;margin:0 auto}
+input{font:inherit;font-size:16px;width:100%;padding:11px 12px;border-radius:10px;border:1px solid var(--line);background:var(--panel);color:var(--text)}
+#grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px;margin-top:14px}
+.tile{aspect-ratio:1.586;border:0;border-radius:14px;color:#fff;text-align:left;padding:12px;display:flex;flex-direction:column;justify-content:space-between;overflow:hidden}
+.tile b{font-size:18px;line-height:1.15;overflow-wrap:anywhere}
+.tile span{font-size:13px;opacity:.85;letter-spacing:.06em}
+#empty{text-align:center;color:var(--muted);margin:56px 16px}
+.ov{position:fixed;inset:0;overflow:auto;-webkit-overflow-scrolling:touch}
+#v{z-index:20;color:#fff;padding:calc(env(safe-area-inset-top,0px) + 12px) 16px calc(env(safe-area-inset-bottom,0px) + 16px)}
+#v .in{max-width:480px;margin:0 auto}
+#vn{font-size:28px;margin:8px 0 14px;letter-spacing:-.02em;overflow-wrap:anywhere}
+#vp{background:#fff;color:#000;border-radius:16px;padding:18px 14px;text-align:center}
+#vc svg{width:100%;height:auto;max-height:46vh;display:block}
+#vnum{font:600 20px/1.2 ui-monospace,"SF Mono",Menlo,monospace;letter-spacing:.08em;margin-top:10px;overflow-wrap:anywhere}
+#vnote{margin:14px 2px 0;opacity:.9}
+.row{display:flex;gap:10px;margin-top:18px}
+.btn{flex:1;padding:13px;border-radius:12px;border:0;font-weight:600;background:rgba(255,255,255,.22);color:#fff}
+#s{z-index:30;background:rgba(0,0,0,.45);display:flex;align-items:flex-end}
+#s .sheet{background:var(--bg);width:100%;max-width:640px;margin:0 auto;border-radius:20px 20px 0 0;padding:18px 16px calc(env(safe-area-inset-bottom,0px) + 16px);max-height:92%;overflow:auto}
+.sheet h2{margin:0 0 12px;font-size:20px}
+.sheet label{display:block;font-size:13px;color:var(--muted);margin:12px 0 5px}
+.chips,.seg,.sw{display:flex;flex-wrap:wrap;gap:8px}
+.chip{padding:6px 11px;border-radius:99px;border:1px solid var(--line);background:var(--panel);color:var(--text);font-size:14px}
+.seg button{flex:1 0 22%;padding:9px 6px;border:1px solid var(--line);background:var(--panel);color:var(--text);border-radius:10px;font-size:14px}
+.seg button.on{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent);font-weight:600}
+.sw button{width:36px;height:36px;border-radius:50%;border:3px solid var(--bg);box-shadow:0 0 0 1px var(--line)}
+.sw button.on{box-shadow:0 0 0 3px var(--accent)}
+.sheet .row .btn{background:var(--panel);color:var(--text);border:1px solid var(--line)}
+.sheet .row .btn.pri{background:var(--accent);border-color:var(--accent);color:#fff}
+#del{width:100%;margin-top:10px;padding:12px;border:0;background:none;color:var(--danger);font-weight:600}
+#err{color:var(--danger);font-size:14px;min-height:18px;margin-top:8px}
+.hb{display:flex;gap:10px}
+.ic.alt{background:var(--panel);color:var(--accent);border:1px solid var(--line);display:grid;place-items:center}
+.ic.alt svg{width:22px;height:22px}
+.scanbtn{width:100%;margin-top:12px;padding:12px;border-radius:10px;border:1px solid var(--accent);background:none;color:var(--accent);font-weight:600}
+.bk{display:flex;gap:10px;justify-content:center;margin-top:28px}
+.bk button{background:none;border:0;color:var(--accent);font-size:14px;padding:8px}
+#sc{z-index:40;background:#000;color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden}
+#sv{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+#sc .frame{position:relative;width:78%;max-width:340px;aspect-ratio:1.6;border:3px solid #fff;border-radius:16px;box-shadow:0 0 0 100vmax rgba(0,0,0,.45)}
+#scmsg{position:relative;margin:18px 0 0;padding:0 24px;text-align:center}
+#scx{position:absolute;left:50%;transform:translateX(-50%);bottom:calc(env(safe-area-inset-bottom,0px) + 28px);padding:13px 30px;border-radius:12px;border:0;font-weight:600;background:rgba(255,255,255,.25);color:#fff}
+</style>
+</head>
+<body>
+<header><h1>Mes cartes</h1><div class="hb">
+  <button id="scan" class="ic alt" aria-label="Scanner une carte"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 8V5a1 1 0 0 1 1-1h3M16 4h3a1 1 0 0 1 1 1v3M20 16v3a1 1 0 0 1-1 1h-3M8 20H5a1 1 0 0 1-1-1v-3M8 9v6M12 9v6M16 9v6"/></svg></button>
+  <button id="add" class="ic" aria-label="Ajouter une carte">+</button></div></header>
+<main>
+  <input id="q" type="search" placeholder="Rechercher une carte" aria-label="Rechercher">
+  <div id="grid"></div>
+  <p id="empty">Aucune carte pour l'instant.<br>Touchez + pour ajouter la première, ou scannez-la avec la caméra.</p>
+  <div class="bk"><button id="exp">Exporter mes cartes</button><button id="imp">Importer</button><input id="imf" type="file" accept="application/json,.json" hidden></div>
+</main>
+
+<div id="v" class="ov" hidden>
+  <div class="in">
+    <h2 id="vn"></h2>
+    <div id="vp"><div id="vc"></div><div id="vnum"></div></div>
+    <p id="vnote"></p>
+    <div class="row"><button class="btn" id="ved">Modifier</button><button class="btn" id="vx">Fermer</button></div>
+  </div>
+</div>
+
+<div id="s" class="ov" hidden>
+  <div class="sheet">
+    <h2 id="st">Nouvelle carte</h2>
+    <label for="n">Nom de l'enseigne</label>
+    <input id="n" autocomplete="off" placeholder="Ex. Carrefour">
+    <div class="chips" id="chips" style="margin-top:8px"></div>
+    <button class="scanbtn" id="scs">Scanner avec la caméra</button>
+    <label for="c">Numéro de la carte</label>
+    <input id="c" autocomplete="off" inputmode="text" placeholder="Numéro sous le code-barres">
+    <label>Type de code</label>
+    <div class="seg" id="seg"></div>
+    <label>Couleur</label>
+    <div class="sw" id="sw"></div>
+    <label for="t">Note (facultatif)</label>
+    <input id="t" autocomplete="off" placeholder="Ex. −10 % chaque mardi">
+    <div id="err"></div>
+    <div class="row"><button class="btn" id="no">Annuler</button><button class="btn pri" id="ok">Enregistrer</button></div>
+    <button id="del" hidden>Supprimer la carte</button>
+  </div>
+</div>
+
+<div id="sc" class="ov" hidden>
+  <video id="sv" playsinline muted autoplay></video>
+  <div class="frame"></div>
+  <p id="scmsg"></p>
+  <button id="scx">Annuler</button>
+</div>
+
+<script>
+const K='wallet.cards.v1';
+const COLORS=['#d93025','#1a73e8','#1e8e3e','#d9780a','#8e44ad','#2c2c2e','#00897b','#d81b60'];
+const FMTS=[['CODE128','Code 128'],['EAN13','EAN-13'],['EAN8','EAN-8'],['CODE39','Code 39'],['ITF','ITF'],['UPCE','UPC-E'],['codabar','Codabar'],['QR','QR']];
+const SHOPS=['Carrefour','Leclerc','Auchan','Lidl Plus','Monoprix','Decathlon','Fnac','Sephora'];
+const $=s=>document.querySelector(s);
+const esc=s=>String(s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+let cards=load(),edId=null,viewId=null,fmt='CODE128',col=COLORS[1],wl=null;
+
+function load(){try{const a=JSON.parse(localStorage.getItem(K)||'[]');return Array.isArray(a)?a:[]}catch(e){return[]}}
+function save(){try{localStorage.setItem(K,JSON.stringify(cards))}catch(e){}}
+
+function render(){
+  const q=$('#q').value.trim().toLowerCase();
+  const l=cards.filter(c=>c.name.toLowerCase().includes(q));
+  $('#grid').innerHTML=l.map(c=>`<button class="tile" style="background:${esc(c.color)}" data-id="${esc(c.id)}"><b>${esc(c.name)}</b><span>•••• ${esc(c.code.slice(-4))}</span></button>`).join('');
+  $('#empty').hidden=cards.length>0;
+}
+
+function qrSvg(t){
+  const q=qrcode(0,'M');q.addData(t);q.make();
+  const n=q.getModuleCount();let d='';
+  for(let r=0;r<n;r++)for(let c=0;c<n;c++)if(q.isDark(r,c))d+=`M${c} ${r}h1v1h-1z`;
+  return `<svg viewBox="-2 -2 ${n+4} ${n+4}" shape-rendering="crispEdges"><path d="${d}"/></svg>`;
+}
+function drawCode(c,box){
+  box.innerHTML='';
+  if(c.fmt==='QR'){
+    try{box.innerHTML=qrSvg(c.code)}catch(e){box.textContent='QR code indisponible'}
+    return;
+  }
+  const s=document.createElementNS('http://www.w3.org/2000/svg','svg');
+  box.appendChild(s);
+  const o={displayValue:false,margin:8,height:110,background:'#fff'};
+  try{JsBarcode(s,c.code,{...o,format:c.fmt})}
+  catch(e){try{JsBarcode(s,c.code,{...o,format:'CODE128'})}catch(e2){box.textContent='Code illisible : vérifiez le numéro'}}
+}
+
+async function lock(){try{wl=await navigator.wakeLock.request('screen')}catch(e){}}
+function unlock(){try{wl&&wl.release()}catch(e){}wl=null}
+
+function openView(id){
+  const c=cards.find(x=>x.id===id);if(!c)return;
+  viewId=id;
+  $('#v').style.background=c.color;
+  $('#vn').textContent=c.name;
+  drawCode(c,$('#vc'));
+  $('#vnum').textContent=c.code;
+  $('#vnote').textContent=c.note||'';
+  $('#v').hidden=false;lock();
+}
+function closeView(){$('#v').hidden=true;viewId=null;unlock()}
+
+function paint(){
+  [...$('#seg').children].forEach(b=>b.classList.toggle('on',b.dataset.f===fmt));
+  [...$('#sw').children].forEach(b=>b.classList.toggle('on',b.dataset.c===col));
+}
+function openEd(id){
+  edId=id||null;
+  const c=cards.find(x=>x.id===id)||{};
+  $('#st').textContent=id?'Modifier la carte':'Nouvelle carte';
+  $('#n').value=c.name||'';$('#c').value=c.code||'';$('#t').value=c.note||'';
+  fmt=c.fmt||'CODE128';col=c.color||COLORS[1];paint();
+  $('#del').hidden=!id;$('#del').textContent='Supprimer la carte';$('#err').textContent='';
+  $('#s').hidden=false;
+}
+
+$('#chips').innerHTML=SHOPS.map(s=>`<button class="chip" data-s="${esc(s)}">${esc(s)}</button>`).join('');
+$('#seg').innerHTML=FMTS.map(f=>`<button data-f="${f[0]}">${f[1]}</button>`).join('');
+$('#sw').innerHTML=COLORS.map(c=>`<button data-c="${c}" style="background:${c}" aria-label="Couleur ${c}"></button>`).join('');
+
+$('#chips').onclick=e=>{const b=e.target.closest('[data-s]');if(b)$('#n').value=b.dataset.s};
+$('#seg').onclick=e=>{const b=e.target.closest('[data-f]');if(b){fmt=b.dataset.f;paint()}};
+$('#sw').onclick=e=>{const b=e.target.closest('[data-c]');if(b){col=b.dataset.c;paint()}};
+$('#grid').onclick=e=>{const b=e.target.closest('[data-id]');if(b)openView(b.dataset.id)};
+$('#q').oninput=render;
+$('#add').onclick=()=>openEd();
+$('#vx').onclick=closeView;
+$('#ved').onclick=()=>openEd(viewId);
+$('#no').onclick=()=>{$('#s').hidden=true};
+$('#ok').onclick=()=>{
+  const name=$('#n').value.trim(),code=$('#c').value.trim();
+  if(!name||!code){$('#err').textContent='Le nom et le numéro sont obligatoires.';return}
+  const was=edId,o={id:was||uid(),name,code,fmt,color:col,note:$('#t').value.trim()};
+  if(was)cards=cards.map(x=>x.id===was?o:x);else cards.unshift(o);
+  save();render();$('#s').hidden=true;
+  if(was&&!$('#v').hidden)openView(was);
+};
+$('#del').onclick=()=>{
+  if($('#del').textContent!=='Confirmer la suppression'){$('#del').textContent='Confirmer la suppression';return}
+  cards=cards.filter(x=>x.id!==edId);save();render();
+  $('#s').hidden=true;closeView();
+};
+document.addEventListener('visibilitychange',()=>{if(!document.hidden&&!$('#v').hidden)lock()});
+/* ---------- Scanner caméra (ZXing) ---------- */
+const MAP={CODE_128:'CODE128',EAN_13:'EAN13',EAN_8:'EAN8',CODE_39:'CODE39',ITF:'ITF',UPC_E:'UPCE',CODABAR:'codabar',QR_CODE:'QR'};
+let reader=null,scanCtl=null;
+async function startScan(){
+  const msg=$('#scmsg');$('#sc').hidden=false;msg.textContent='Placez le code-barres dans le cadre';
+  if(typeof ZXing==='undefined'){msg.textContent='Scanner indisponible : connexion requise au premier lancement.';return}
+  try{
+    const B=ZXing.BarcodeFormat,h=new Map();
+    h.set(ZXing.DecodeHintType.POSSIBLE_FORMATS,[B.CODE_128,B.CODE_39,B.EAN_13,B.EAN_8,B.ITF,B.UPC_A,B.UPC_E,B.CODABAR,B.QR_CODE,B.PDF_417,B.AZTEC,B.DATA_MATRIX]);
+    h.set(ZXing.DecodeHintType.TRY_HARDER,true);
+    reader=new ZXing.BrowserMultiFormatReader(h,250);
+    scanCtl=await reader.decodeFromConstraints({video:{facingMode:{ideal:'environment'}}},'sv',res=>{if(res)onScanned(res)});
+    if($('#sc').hidden)stopScan();
+  }catch(e){msg.textContent='Caméra inaccessible : autorisez-la dans les réglages de votre navigateur.'}
+}
+function stopScan(){
+  try{scanCtl&&scanCtl.stop()}catch(e){}
+  try{reader&&reader.reset&&reader.reset()}catch(e){}
+  const v=$('#sv');
+  try{v.srcObject&&v.srcObject.getTracks().forEach(t=>t.stop());v.srcObject=null}catch(e){}
+  reader=scanCtl=null;$('#sc').hidden=true;
+}
+function onScanned(res){
+  if($('#sc').hidden)return;
+  const name=ZXing.BarcodeFormat[res.getBarcodeFormat()];
+  let code=res.getText(),f=MAP[name],note='';
+  if(name==='UPC_A'){code='0'+code;f='EAN13'}
+  if(!f){f=['PDF_417','AZTEC','DATA_MATRIX'].includes(name)?'QR':'CODE128';note='Format '+name+' non reproductible : remplacé par '+(f==='QR'?'un QR code.':'un Code 128.')}
+  stopScan();
+  try{navigator.vibrate&&navigator.vibrate(60)}catch(e){}
+  $('#c').value=code;fmt=f;paint();$('#err').textContent=note;
+  if(!$('#n').value)$('#n').focus();
+}
+$('#scs').onclick=startScan;
+$('#scx').onclick=stopScan;
+$('#scan').onclick=()=>{openEd();startScan()};
+if(!(navigator.mediaDevices&&navigator.mediaDevices.getUserMedia)){$('#scan').hidden=true;$('#scs').hidden=true}
+document.addEventListener('visibilitychange',()=>{if(document.hidden&&!$('#sc').hidden)stopScan()});
+
+/* ---------- Sauvegarde / restauration ---------- */
+$('#exp').onclick=async()=>{
+  const f=new File([JSON.stringify(cards,null,1)],'cartes.json',{type:'application/json'});
+  try{if(navigator.canShare&&navigator.canShare({files:[f]})){await navigator.share({files:[f]});return}}catch(e){return}
+  const a=document.createElement('a');a.href=URL.createObjectURL(f);a.download='cartes.json';a.click();
+  setTimeout(()=>URL.revokeObjectURL(a.href),4000);
+};
+$('#imp').onclick=()=>$('#imf').click();
+$('#imf').onchange=async e=>{
+  const f=e.target.files[0];if(!f)return;
+  try{
+    const a=JSON.parse(await f.text());if(!Array.isArray(a))throw 0;
+    const ids=new Set(cards.map(c=>c.id));
+    a.filter(c=>c&&c.name&&c.code&&!ids.has(c.id)).forEach(c=>cards.push({id:c.id||uid(),name:String(c.name),code:String(c.code),fmt:c.fmt||'CODE128',color:c.color||COLORS[1],note:String(c.note||'')}));
+    save();render();
+  }catch(err){alert('Fichier invalide.')}
+  e.target.value='';
+};
+
+/* ---------- PWA ---------- */
+if('serviceWorker' in navigator)addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(()=>{}));
+try{navigator.storage&&navigator.storage.persist&&navigator.storage.persist()}catch(e){}
+render();
+</script>
+</body>
+</html>
