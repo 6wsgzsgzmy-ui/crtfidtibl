@@ -1,5 +1,5 @@
 // Changez la version à chaque mise à jour du site pour renouveler le cache.
-const V = 'cartes-v3';
+const V = 'cartes-v4';
 const LOCAL = ['./', './index.html', './manifest.webmanifest',
   './icons/icon-192.png', './icons/icon-512.png', './icons/apple-touch-icon.png'];
 const CDN = [
