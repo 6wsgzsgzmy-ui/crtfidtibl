@@ -1,5 +1,5 @@
 // Changez la version à chaque mise à jour du site pour renouveler le cache.
-const V = 'cartes-v5';
+const V = 'cartes-v7';
 const LOCAL = ['./', './index.html', './manifest.webmanifest',
   './icons/icon-192.png', './icons/icon-512.png', './icons/apple-touch-icon.png'];
 const CDN = [
@@ -28,6 +28,23 @@ self.addEventListener('activate', e => {
 self.addEventListener('fetch', e => {
   const r = e.request;
   if (r.method !== 'GET') return;
+  if (r.mode === 'navigate') {
+    // Réseau d'abord (version à jour), mais si la connexion est absente ou lente (> 3 s),
+    // on ouvre immédiatement la copie en cache ; la mise à jour se termine en arrière-plan.
+    e.respondWith((async () => {
+      const c = await caches.open(V);
+      const cached = await c.match('./index.html');
+      const net = fetch(r).then(res => {
+        if (res.ok) c.put('./index.html', res.clone());
+        return res;
+      });
+      if (!cached) return net.catch(() => Response.error());
+      e.waitUntil(net.catch(() => {}));
+      const slow = new Promise(ok => setTimeout(() => ok(cached), 3000));
+      return Promise.race([net, slow]).catch(() => cached);
+    })());
+    return;
+  }
   e.respondWith((async () => {
     const c = await caches.open(V);
     const hit = await c.match(r, { ignoreSearch: true });

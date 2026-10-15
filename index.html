@@ -6,8 +6,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Cartes">
 <meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="theme-color" content="#f2f2f7" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icons/icon-192.png">
@@ -17,7 +16,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/barcode-detector@3.2.0/dist/iife/ponyfill.min.js"></script>
 <style>
-:root{--bg:#f2f2f7;--panel:#fff;--text:#1c1c1e;--muted:#6e6e73;--line:#d8d8de;--accent:#0a64d6;--danger:#d70015;color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+:root{--bg:#ffffff;--panel:#fff;--text:#1c1c1e;--muted:#6e6e73;--line:#d8d8de;--accent:#0a64d6;--danger:#d70015;color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#000;--panel:#1c1c1e;--text:#f2f2f7;--muted:#9a9aa1;--line:#38383a;--accent:#4da3ff;--danger:#ff6b6b;color-scheme:dark}}
 :root[data-theme="dark"]{--bg:#000;--panel:#1c1c1e;--text:#f2f2f7;--muted:#9a9aa1;--line:#38383a;--accent:#4da3ff;--danger:#ff6b6b;color-scheme:dark}
 html{height:100%;height:100dvh;overflow:hidden;background:var(--bg)}
@@ -302,6 +301,8 @@ $('#c').oninput=()=>{if(fm==='auto'){fmt=guess($('#c').value.trim());paint()}};
 
 /* ---------- PWA ---------- */
 if('serviceWorker' in navigator)addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(()=>{}));
+// Précharge le lecteur de codes-barres (fichier .wasm) afin que le scan fonctionne aussi hors ligne
+addEventListener('load',()=>setTimeout(()=>{try{if(navigator.onLine&&typeof ImageData==='function')detector().detect(new ImageData(1,1)).catch(()=>{})}catch(e){}},4000));
 try{navigator.storage&&navigator.storage.persist&&navigator.storage.persist()}catch(e){}
 render();
 </script>
