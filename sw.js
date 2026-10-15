@@ -1,11 +1,11 @@
 // Changez la version à chaque mise à jour du site pour renouveler le cache.
-const V = 'cartes-v1';
+const V = 'cartes-v3';
 const LOCAL = ['./', './index.html', './manifest.webmanifest',
   './icons/icon-192.png', './icons/icon-512.png', './icons/apple-touch-icon.png'];
 const CDN = [
   'https://cdnjs.cloudflare.com/ajax/libs/jsbarcode/3.11.6/JsBarcode.all.min.js',
   'https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js',
-  'https://cdn.jsdelivr.net/npm/@zxing/library@0.21.3/umd/index.min.js'
+  'https://cdn.jsdelivr.net/npm/barcode-detector@3.2.0/dist/iife/ponyfill.min.js'
 ];
 
 self.addEventListener('install', e => {

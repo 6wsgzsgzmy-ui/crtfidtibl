@@ -15,7 +15,7 @@
 <title>Mes cartes</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jsbarcode/3.11.6/JsBarcode.all.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@zxing/library@0.21.3/umd/index.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/barcode-detector@3.2.0/dist/iife/ponyfill.min.js"></script>
 <style>
 :root{--bg:#f2f2f7;--panel:#fff;--text:#1c1c1e;--muted:#6e6e73;--line:#d8d8de;--accent:#0a64d6;--danger:#d70015;color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
 @media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#000;--panel:#1c1c1e;--text:#f2f2f7;--muted:#9a9aa1;--line:#38383a;--accent:#4da3ff;--danger:#ff6b6b;color-scheme:dark}}
@@ -71,6 +71,11 @@ input{font:inherit;font-size:16px;width:100%;padding:11px 12px;border-radius:10p
 #sc .frame{position:relative;width:78%;max-width:340px;aspect-ratio:1.6;border:3px solid #fff;border-radius:16px;box-shadow:0 0 0 100vmax rgba(0,0,0,.45)}
 #scmsg{position:relative;margin:18px 0 0;padding:0 24px;text-align:center}
 #scx{position:absolute;left:50%;transform:translateX(-50%);bottom:calc(env(safe-area-inset-bottom,0px) + 28px);padding:13px 30px;border-radius:12px;border:0;font-weight:600;background:rgba(255,255,255,.25);color:#fff}
+details{margin-top:14px}summary{font-size:13px;color:var(--muted);padding:4px 0;cursor:pointer}summary b{color:var(--text)}details .seg{margin-top:8px}
+.scb{position:absolute;left:0;right:0;bottom:calc(env(safe-area-inset-bottom,0px) + 28px);display:flex;gap:12px;justify-content:center}
+.scb #scx{position:static;transform:none}
+.pb{padding:13px 30px;border-radius:12px;font-weight:600;background:rgba(255,255,255,.25);color:#fff;cursor:pointer}
+.vh{position:absolute;opacity:0;width:1px;height:1px}
 </style>
 </head>
 <body>
@@ -102,8 +107,7 @@ input{font:inherit;font-size:16px;width:100%;padding:11px 12px;border-radius:10p
     <button class="scanbtn" id="scs">Scanner avec la caméra</button>
     <label for="c">Numéro de la carte</label>
     <input id="c" autocomplete="off" inputmode="text" placeholder="Numéro sous le code-barres">
-    <label>Type de code</label>
-    <div class="seg" id="seg"></div>
+    <details id="adv"><summary>Type de code : <b id="fl">Auto</b></summary><div class="seg" id="seg"></div></details>
     <label>Couleur</label>
     <div class="sw" id="sw"></div>
     <label for="t">Note (facultatif)</label>
@@ -118,7 +122,7 @@ input{font:inherit;font-size:16px;width:100%;padding:11px 12px;border-radius:10p
   <video id="sv" playsinline muted autoplay></video>
   <div class="frame"></div>
   <p id="scmsg"></p>
-  <button id="scx">Annuler</button>
+  <div class="scb"><label class="pb">Photo<input id="ph" class="vh" type="file" accept="image/*"></label><button id="scx">Annuler</button></div>
 </div>
 
 <script>
@@ -129,7 +133,7 @@ const SHOPS=['Carrefour','Leclerc','Auchan','Lidl Plus','Monoprix','Decathlon','
 const $=s=>document.querySelector(s);
 const esc=s=>String(s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
 const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,6);
-let cards=load(),edId=null,viewId=null,fmt='CODE128',col=COLORS[1],wl=null;
+let cards=load(),edId=null,viewId=null,fmt='CODE128',col=COLORS[1],wl=null,fm='auto';
 
 function load(){try{const a=JSON.parse(localStorage.getItem(K)||'[]');return Array.isArray(a)?a:[]}catch(e){return[]}}
 function save(){try{localStorage.setItem(K,JSON.stringify(cards))}catch(e){}}
@@ -177,6 +181,7 @@ function closeView(){$('#v').hidden=true;viewId=null;unlock()}
 
 function paint(){
   [...$('#seg').children].forEach(b=>b.classList.toggle('on',b.dataset.f===fmt));
+  const fl=(FMTS.find(f=>f[0]===fmt)||[0,fmt])[1];$('#fl').textContent=fm==='manual'?fl:'Auto · '+fl;
   [...$('#sw').children].forEach(b=>b.classList.toggle('on',b.dataset.c===col));
 }
 function openEd(id){
@@ -184,7 +189,7 @@ function openEd(id){
   const c=cards.find(x=>x.id===id)||{};
   $('#st').textContent=id?'Modifier la carte':'Nouvelle carte';
   $('#n').value=c.name||'';$('#c').value=c.code||'';$('#t').value=c.note||'';
-  fmt=c.fmt||'CODE128';col=c.color||COLORS[1];paint();
+  fmt=c.fmt||'CODE128';col=c.color||COLORS[1];fm=id?'manual':'auto';$('#adv').open=false;paint();
   $('#del').hidden=!id;$('#del').textContent='Supprimer la carte';$('#err').textContent='';
   $('#s').hidden=false;
 }
@@ -194,7 +199,7 @@ $('#seg').innerHTML=FMTS.map(f=>`<button data-f="${f[0]}">${f[1]}</button>`).joi
 $('#sw').innerHTML=COLORS.map(c=>`<button data-c="${c}" style="background:${c}" aria-label="Couleur ${c}"></button>`).join('');
 
 $('#chips').onclick=e=>{const b=e.target.closest('[data-s]');if(b)$('#n').value=b.dataset.s};
-$('#seg').onclick=e=>{const b=e.target.closest('[data-f]');if(b){fmt=b.dataset.f;paint()}};
+$('#seg').onclick=e=>{const b=e.target.closest('[data-f]');if(b){fmt=b.dataset.f;fm='manual';paint()}};
 $('#sw').onclick=e=>{const b=e.target.closest('[data-c]');if(b){col=b.dataset.c;paint()}};
 $('#grid').onclick=e=>{const b=e.target.closest('[data-id]');if(b)openView(b.dataset.id)};
 $('#q').oninput=render;
@@ -216,43 +221,73 @@ $('#del').onclick=()=>{
   $('#s').hidden=true;closeView();
 };
 document.addEventListener('visibilitychange',()=>{if(!document.hidden&&!$('#v').hidden)lock()});
-/* ---------- Scanner caméra (ZXing) ---------- */
-const MAP={CODE_128:'CODE128',EAN_13:'EAN13',EAN_8:'EAN8',CODE_39:'CODE39',ITF:'ITF',UPC_E:'UPCE',CODABAR:'codabar',QR_CODE:'QR'};
-let reader=null,scanCtl=null;
+/* ---------- Scanner caméra (barcode-detector : ZXing-C++ WebAssembly) ---------- */
+const MAP={code_128:'CODE128',ean_13:'EAN13',ean_8:'EAN8',code_39:'CODE39',itf:'ITF',upc_e:'UPCE',codabar:'codabar',qr_code:'QR'};
+const FORMATS=['code_128','code_39','ean_13','ean_8','itf','upc_a','upc_e','codabar','qr_code','pdf417','aztec','data_matrix'];
+let det=null,stream=null,timer=null,scanning=false;
+const say=t=>{$('#scmsg').textContent=t};
+function detector(){
+  if(!det){
+    if(!(window.BarcodeDetectionAPI&&BarcodeDetectionAPI.BarcodeDetector))throw new Error('lecteur non chargé');
+    det=new BarcodeDetectionAPI.BarcodeDetector({formats:FORMATS});
+  }
+  return det;
+}
+function stopStream(){
+  try{stream&&stream.getTracks().forEach(t=>t.stop())}catch(e){}
+  stream=null;try{$('#sv').srcObject=null}catch(e){}
+}
+function stopScan(){scanning=false;clearTimeout(timer);stopStream();$('#sc').hidden=true}
 async function startScan(){
-  const msg=$('#scmsg');$('#sc').hidden=false;msg.textContent='Placez le code-barres dans le cadre';
-  if(typeof ZXing==='undefined'){msg.textContent='Scanner indisponible : connexion requise au premier lancement.';return}
+  $('#sc').hidden=false;scanning=true;say('Démarrage de la caméra…');
+  let d;
+  try{d=detector()}catch(e){say('Lecteur indisponible ('+e.message+'). Vérifiez la connexion, ou utilisez la photo.');return}
   try{
-    const B=ZXing.BarcodeFormat,h=new Map();
-    h.set(ZXing.DecodeHintType.POSSIBLE_FORMATS,[B.CODE_128,B.CODE_39,B.EAN_13,B.EAN_8,B.ITF,B.UPC_A,B.UPC_E,B.CODABAR,B.QR_CODE,B.PDF_417,B.AZTEC,B.DATA_MATRIX]);
-    h.set(ZXing.DecodeHintType.TRY_HARDER,true);
-    reader=new ZXing.BrowserMultiFormatReader(h,250);
-    scanCtl=await reader.decodeFromConstraints({video:{facingMode:{ideal:'environment'}}},'sv',res=>{if(res)onScanned(res)});
-    if($('#sc').hidden)stopScan();
-  }catch(e){msg.textContent='Caméra inaccessible : autorisez-la dans les réglages de votre navigateur.'}
+    stream=await navigator.mediaDevices.getUserMedia({audio:false,video:{facingMode:{ideal:'environment'},width:{ideal:1920},height:{ideal:1080}}});
+  }catch(e){say('Caméra inaccessible ('+(e.name||'erreur')+'). Autorisez-la dans les réglages, ou utilisez la photo.');return}
+  if(!scanning){stopStream();return}
+  const v=$('#sv');v.srcObject=stream;
+  try{await v.play()}catch(e){}
+  say('Chargement du lecteur…');
+  const cv=document.createElement('canvas'),cx=cv.getContext('2d',{willReadFrequently:true}),t0=Date.now();
+  const tick=async()=>{
+    if(!scanning)return;
+    try{
+      if(v.videoWidth){
+        const k=Math.min(1,1280/Math.max(v.videoWidth,v.videoHeight));
+        cv.width=Math.round(v.videoWidth*k);cv.height=Math.round(v.videoHeight*k);
+        cx.drawImage(v,0,0,cv.width,cv.height);
+        const r=await d.detect(cx.getImageData(0,0,cv.width,cv.height));
+        if(!scanning)return;
+        if(r.length){onScanned(r[0]);return}
+        say(Date.now()-t0>12000?'Rien détecté : rapprochez la carte, évitez les reflets, ou utilisez la photo.':'Placez le code-barres dans le cadre');
+      }
+      timer=setTimeout(tick,120);
+    }catch(e){say('Erreur du lecteur : '+(e.message||e)+'. Vérifiez la connexion, ou utilisez la photo.')}
+  };
+  tick();
 }
-function stopScan(){
-  try{scanCtl&&scanCtl.stop()}catch(e){}
-  try{reader&&reader.reset&&reader.reset()}catch(e){}
-  const v=$('#sv');
-  try{v.srcObject&&v.srcObject.getTracks().forEach(t=>t.stop());v.srcObject=null}catch(e){}
-  reader=scanCtl=null;$('#sc').hidden=true;
-}
-function onScanned(res){
-  if($('#sc').hidden)return;
-  const name=ZXing.BarcodeFormat[res.getBarcodeFormat()];
-  let code=res.getText(),f=MAP[name],note='';
-  if(name==='UPC_A'){code='0'+code;f='EAN13'}
-  if(!f){f=['PDF_417','AZTEC','DATA_MATRIX'].includes(name)?'QR':'CODE128';note='Format '+name+' non reproductible : remplacé par '+(f==='QR'?'un QR code.':'un Code 128.')}
+function onScanned(r){
+  const name=r.format;let code=r.rawValue,f=MAP[name],note='';
+  if(name==='upc_a'&&code.length===12){code='0'+code;f='EAN13'}
+  else if(name==='upc_a'){f='EAN13'}
+  if(!f){f=['pdf417','aztec','data_matrix'].includes(name)?'QR':'CODE128';note='Format '+name+' non reproductible : remplacé par '+(f==='QR'?'un QR code.':'un Code 128.')}
   stopScan();
   try{navigator.vibrate&&navigator.vibrate(60)}catch(e){}
-  $('#c').value=code;fmt=f;paint();$('#err').textContent=note;
+  $('#c').value=code;fmt=f;fm='scan';paint();$('#err').textContent=note;
   if(!$('#n').value)$('#n').focus();
 }
+$('#ph').onchange=async e=>{
+  const f=e.target.files[0];e.target.value='';if(!f)return;
+  $('#sc').hidden=false;say('Analyse de la photo…');
+  try{
+    const r=await detector().detect(f);
+    if(r.length)onScanned(r[0]);else say('Aucun code détecté sur la photo. Rapprochez-vous, évitez les reflets, puis réessayez.');
+  }catch(err){say('Erreur : '+(err.message||err))}
+};
 $('#scs').onclick=startScan;
 $('#scx').onclick=stopScan;
 $('#scan').onclick=()=>{openEd();startScan()};
-if(!(navigator.mediaDevices&&navigator.mediaDevices.getUserMedia)){$('#scan').hidden=true;$('#scs').hidden=true}
 document.addEventListener('visibilitychange',()=>{if(document.hidden&&!$('#sc').hidden)stopScan()});
 
 /* ---------- Sauvegarde / restauration ---------- */
@@ -273,6 +308,11 @@ $('#imf').onchange=async e=>{
   }catch(err){alert('Fichier invalide.')}
   e.target.value='';
 };
+
+/* ---------- Détection automatique du type ---------- */
+const ean=s=>{const d=s.split('').map(Number),k=d.pop();let t=0;d.reverse().forEach((x,i)=>t+=x*(i%2?1:3));return (10-t%10)%10===k};
+const guess=v=>/^\d{13}$/.test(v)&&ean(v)?'EAN13':/^\d{8}$/.test(v)&&ean(v)?'EAN8':'CODE128';
+$('#c').oninput=()=>{if(fm==='auto'){fmt=guess($('#c').value.trim());paint()}};
 
 /* ---------- PWA ---------- */
 if('serviceWorker' in navigator)addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(()=>{}));
